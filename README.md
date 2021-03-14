@@ -1,204 +1,205 @@
-# JPEXS Free Flash Decompiler
+# Introduction
+This branch of JPEXS adds two new command-line commands: -replacebatch and -replacemethod. 
+They operate the same way -replace operates in vanilla JPEXS. 
+It's designed to be used with batch (.bat) files to make porting mods easier.
+Note that this is designed for advanced users, and off the top of my head, I only know one person who *might* use this.
 
-Opensource flash SWF decompiler and editor. Extract resources, convert SWF to FLA, edit ActionScript, replace images, sounds, texts or fonts. Various output formats available. Works with Java on Windows, Linux or MacOS.
-
-## Application description and features
-For information about using the software, list of features, etc., visit [FFDec Wiki](https://github.com/jindrapetrik/jpexs-decompiler/wiki/).
-
-## Free-Decompiler.com website
-In the past (before 2018), we were using *free-decompiler.com* domain as HomePage, GitHub for source code, now we moved all information to Github.
-
-## Download application
-For downloading the app, see [latest release](https://github.com/jindrapetrik/jpexs-decompiler/releases/latest).
-Older versions and nightly builds are availabe on [releases section](https://github.com/jindrapetrik/jpexs-decompiler/releases)
-
-### How to install
-See [installation section of wiki](https://github.com/jindrapetrik/jpexs-decompiler/wiki/Installation)
-
-## Source code
-### How to get source
- You can make local copy of the sources with the following command:
-```
-git clone https://github.com/jindrapetrik/jpexs-decompiler.git
-```
-
-### Branches 
-Git source control manager supports multiple code branches. We use two main branches.
-
-* `master` - for released "stable" versions
-* `dev` - for newest changes from developers - "nightly" version is released from this branch
-
-You can switch to `dev` branch with following git command:
-```
-git checkout dev
-```
-
-### GIT recommended
-It is recommended to have [GIT] commandline executables installed. Building script uses GIT to include revision number in to the binary. (For Windows, you must enable Git in windows commandline during installation.)
-
-### Netbeans project
-
-Source code contains Netbeans Project so you can open it in [Netbeans IDE]. Then you can use standard actions like Run, Build,Debug, Clean and Build in the IDE. Other specific tasks can be executed via menu on build.xml (see Ant part)
-
-### Ant
-If you do not have Netbeans, you can build source code also with Apache Ant.
-After installing Ant it is good to put it into your PATH variable.
-Open up commandline and navigate to sources directory.
-To run application, execute task "run" by entering this command:
-```
-ant run
-```
-To only build, execute build task:
-```
-ant build
-```
-For creating EXE, Installer and ZIP version, there exist Ant tasks "exe","installer","release". These tasks require additional software installed:
-* [launch4j] (3.5 or newer) - creates windows executable
-* [NSIS] (Nullsoft Scriptable Install System) (3.0b3 or newer) - creates installer
-
-You must configure installation path of these tools in tools.properties file, which could look like this for windows:
-```
-nsis.path = c:\\program files (x86)\\NSIS
-launch4j.path = c:\\program files (x86)\\launch4j
-```
-### Building libraries
-
-There are few libraries which need to be built too. These libraries are placed in "libsrc" directory.
-* **FFDec_lib** - core of decompilation, SWF parsing, exporting
-**This library is built automatically with main project, but can be build also separately with its own Ant script.**
-* **jpacker** - used for compression of JavaScript Canvas scripts (Netbeans/Ant project)
-* **jpproxy** - proxy part of FFDec (Netbeans/Ant project)
-* **jsyntaxpane** - code editor (Netbeans/Apache Maven project)
-* **LZMA** - used for SWF compression (Netbeans/Ant project)
-* **nellymoser** - used for Nelly Moser sounds decoding (Netbeans/Ant project)
-* **Swf2Exe** - Stub for "Save to EXE" feature (Delphi 7 Project)
-* **ttf** - used for TTF font export (Netbeans/Ant project)
-* **gnujpdf** - used for PDF export (Netbeans/Ant project)
-
-## Change log
-All notable changes are listed in the file [CHANGELOG.md](CHANGELOG.md)
-
-## Deployment
-
-### Nightly builds
-When a commit is pushed/merged into `dev` branch, new prerelease version is created automatically by Travis CI,
-these prerelease versions are called nightly builds. On releasing new nightly build, previous nightly build is removed.
-
-### Stable versions
-New stable version is created automatically by Travis CI when marking a revision in `master` branch with a tag in format `versionxxx`.
+In order to use this branch of JPEXS, you must first unzip the "JPEXS SSF2Patcher.zip" file to a location.
+Note: The contents of "JPEXS SSF2Patcher.zip" are also the contents of the dist folder in this repository. 
+If you choose to modify this build of JPEXS in a Java IDE of your choice, building it should send it to the dist folder.
 
 
-## Contributing
+# Documentation
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Below is the documentation for the new methods added, as well as the vanilla -export, -format, and -replace methods, since you'll probably be using them too.
 
-## Versioning
+ 4) -export <itemtypes> <outdirectory> <infile_or_directory>
+  ...export <infile_or_directory> sources to <outdirectory>.
+  Exports all files from <infile_or_directory> when it is a folder.
+     Values for <itemtypes> parameter:
+        script - Scripts (Default format: ActionScript source)
+        image - Images (Default format: PNG/JPEG)
+        shape - Shapes (Default format: SVG)
+   morphshape - MorphShapes (Default format: SVG)
+        movie - Movies (Default format: FLV without sound)
+        font - Fonts (Default format: TTF)
+        frame - Frames (Default format: PNG)
+        sprite - Sprites (Default format: PNG)
+        button - Buttons (Default format: PNG)
+        sound - Sounds (Default format: MP3/WAV/FLV only sound)
+        binaryData - Binary data (Default format:  Raw data)
+        text - Texts (Default format: Plain text)
+        all - Every resource (but not FLA and XFL)
+        fla - Everything to FLA compressed format
+        xfl - Everything to uncompressed FLA format (XFL)
+   You can export multiple types of items by using colon ","
+      DO NOT PUT space between comma (,) and next value.
 
-Versions are in format `x.y.z`, for example `9.1.2`.
-For the versions available, see the [tags on this repository](https://github.com/jindrapetrik/jpexs-decompiler/tags).
+ 5) -format <formats>
+  ...sets output formats for export
+    Values for <formats> parameter:
+         script:as - ActionScript source
+         script:pcode - ActionScript P-code
+         script:pcodehex - ActionScript P-code with hex
+         script:hex - ActionScript Hex only
+         shape:svg - SVG format for Shapes
+         shape:png - PNG format for Shapes
+         shape:canvas - HTML5 Canvas format for Shapes
+         shape:bmp - BMP format for Shapes
+         morphshape:svg - SVG format for MorphShapes
+         morphshape:canvas - HTML5 Canvas  format for MorphShapes
+         frame:png - PNG format for Frames
+         frame:gif - GIF format for Frames
+         frame:avi - AVI format for Frames
+         frame:svg - SVG format for Frames
+         frame:canvas - HTML5 Canvas format for Frames
+         frame:pdf - PDF format for Frames
+         frame:bmp - BMP format for Frames
+         sprite:png - PNG format for Sprites
+         sprite:gif - GIF format for Sprites
+         sprite:avi - AVI format for Sprites
+         sprite:svg - SVG format for Sprites
+         sprite:canvas - HTML5 Canvas format for Sprites
+         sprite:pdf - PDF format for Sprites
+         sprite:bmp - BMP format for Sprites
+         button:png - PNG format for Buttons
+         button:svg - SVG format for Buttons
+         button:bmp - BMP format for Buttons
+         image:png_gif_jpeg - PNG/GIF/JPEG format for Images
+         image:png - PNG format for Images
+         image:jpeg - JPEG format for Images
+         image:bmp - BMP format for Images
+         text:plain - Plain text format for Texts
+         text:formatted - Formatted text format for Texts
+         text:svg - SVG format for Texts
+         sound:mp3_wav_flv - MP3/WAV/FLV format for Sounds
+         sound:mp3_wav - MP3/WAV format for Sounds
+         sound:wav - WAV format for Sounds
+         sound:flv - FLV format for Sounds
+         font:ttf - TTF format for Fonts
+         font:woff - WOFF format for Fonts
+         fla:<flaversion> or xfl:<flaversion> - Specify FLA format version
+            - values for <flaversion>: cs5,cs5.5,cs6,cc
+      You can set multiple formats at once using comma (,)
+      DO NOT PUT space between comma (,) and next value.
+      The prefix with colon (:) is neccessary.
 
-Nightly builds have additional suffix `_nightlyN` where `N` is number which increments with every (automatic) nightly releleas
-and does not depend on the `x.y.z` numbers. (This means nightly number is *NOT* reseted to 0 when releasing stable)
-Older nightly builds are *NOT* available through git tags.
+ 28) -replace <infile> <outfile> (<characterId1>|<scriptName1>) <importDataFile1> [nofill] ([<format1>][<methodBodyIndex1>]) [(<characterId2>|<scriptName2>) <importDataFile2> [nofill] ([<format2>][<methodBodyIndex2>])]...
+ ...replaces the data of the specified BinaryData, Image, Shape, Text, DefineSound tag or Script
+ ...nofill parameter can be specified only for shape replace
+ ...<format> parameter can be specified for Image and Shape tags
+ ...valid formats: lossless, lossless2, jpeg2, jpeg3, jpeg4
+ ...<methodBodyIndexN> parameter should be specified if and only if the imported entity is an AS3 P-Code
+
+29) -replacebatch <infile> <outfile> <importDataFolder> [nofill] [format1]
+ ...replaces the data of the specified BinaryData, Image, Shape, Text, and DefineSound tags
+ ...<importDataFolder> paramemeter must point to a folder that contains folders for each type of tag you want to replace
+ ...ex. dat15/exports contains the folders images, sounds, and binaryData, so it will replace images, sounds, and binaryData
+ ...nofill parameter can be specified only for shape replace
+ ...<format> parameter can be specified for Image and Shape tags
+ ...valid formats: lossless, lossless2, jpeg2, jpeg3, jpeg4
+
+ 30) -replacemethod <infile> <outfile> <scriptName> <importDataFile1> methodName
+ ...replaces the p-code of the specified method
 
 
-## Authors
-The decompiler was originally written by **Jindra Petřík** also known as **JPEXS**.
-The application was made in Czech republic.
 
-### Developers
-* **JPEXS** - leader, development of the decompiler, website main admin, github account admin, organization
-* **honfika** - development of the decompiler
-* **Paolo Cancedda** - former developer
-* ...other pushers on GitHub or Google Code
+# Tutorial
 
-### Translators
-* **Jaume Badiella Aguilera** - catalan translation
-* **Capasha** - swedish translation
-* **王晨旭** (Chenxu Wang) - chinese translation
-* **focus** - russian translation
-* **honfika** - hungarian translation
-* **kalip** - italian translation
-* **Krock** - german translation
-* **Laurent LOUVET** - french translation
-* **MaGiC** - portugese translation
-* **martinkoza** - polish translation
-* **Osman ÖZ** - turkish translation
-* **pepka** - ukrainian and dutch translation
-* **poxyran** - spanish translation
-* **realmaster42** - portugese-brasil translation
-* **Rtsjx** - chinese translation
-* **koiru** - japanese translation
+First, I'd like to show you how to get this documentation if you choose to see what other methods are at your disposal.
+Simply create a new batch file in the same directory as jpexs.jar, and type in the following:
 
-## Contact
-You can use our Issue tracker to report bugs, but our support is VERY limited.
-[https://www.free-decompiler.com/flash/issues](https://www.free-decompiler.com/flash/issues)
+java -jar jpexs.jar help
 
-See [Frequently Asked Questions (FAQ) in wiki](https://github.com/jindrapetrik/jpexs-decompiler/wiki/FAQ) before you try to contact me.
+After that, run the .bat file, and it should show you all of the JPEXS commands!
+The general gist of jpexs commands is that you use them by first typing java -jar (which runs a jar using Java), jpexs.jar (the path to the jar Java should run), and then the command you want.
 
-### Email contact
-Emergency contact to JPEXS developer is `jindra.petrik@gmail.com`.
-But we prefer Issue tracker contact.
 
-## Licenses + Acknowledgments
-### Application
 
-FFDec Application is licensed with GNU GPL v3, see the [license.txt](license.txt).
-It uses modified code of these libraries:
+## -replace
+Now, I'd like to cover the base -replace method. First, let's talk about what it can do:
 
-* [JSyntaxPane] (Code editor) - Apache License 2.0
-* [Muffin] (Proxy) - GPL
++ Replace Binary Data
++ Replace Images
++ Replace Shapes
++ Replace Text
++ Replace Sounds
++ Replace Scripts*
+*note that replacing scripts using the -replace method is invariably a bad idea, for reasons discussed below
 
-And links also these libraries:
+The "replace binary data" aspect is typically useful for replacing the encrypted mappings/resource manager with a decrypted version.
 
-* [Java Native Access - JNA] (Registry association, Process memory reading) - LGPL
-* [Insubstantial] (Substance Look and Feel, Flamingo Ribbon component) - Revised BSD
-* [javactivex] (Flash Player ActiveX embedding) - LGPLv3
-* [flashdebugger library] (Debugging ActionScript) - LGPLv3
-* FFDec Library (LGPLv3) - see below
+The "replace images" aspect is useful for creating resprites of characters with no hitbox changes.
 
-Application uses also some icons of the [Silk icons pack], [Silk companion 1] and [FatCow icons pack].
-### Library
+The "replace shapes" aspect is useful for creating new effects for characters, but do note that you should not replace character sprites by replacing a shape corresponding to it.
+This is because it'll come out blurry and weird.
 
-FFDec Library is licensed with GNU LGPL v3, see [license.txt](libsrc/ffdec_lib/license.txt) for details.
-It uses modified code of these libraries:
+The "replace text" aspect has no practical application in SSF2 off the top of my head, but if you can find one, I tip my hat to you!
 
-* [sfntly] (WOFF font export) - Apache License 2.0
-* [JLayer] (Decoding MP3) - LGPL
-* UAB "DKD" NellyMoser ASAO codec (Decoding Nelly Moser sound format) - LGPL
-* [Animated GIF Writer] (Frames to GIF export) - Creative Commons Attribution 3.0 Unported
-* [Animated GIF Encoder] (Frames to GIF export)
+The "replace sounds" aspect is useful for doing voice mods. 
+If you ever wanna replace Pit's voice with his Brawl voice, this is the way to do it!
 
-And links also these libraries:
+The "replace scripts" aspect is extremely flawed.
+Using the -format method before using it allows the user to clarify whether they're replacing a .as script or a p-code method.
+However, if the user chooses to replace a .as script, they risk JPEXS exporting a version of it that doesn't work.
+On the other hand, if the user chooses to replace the p-code of a method, they have to know the method's body ID.
+Problem is, the only way of knowing a method's body ID is if you open JPEXS, go to Settings, go to the Scripts tab, and check the "Show method body id" checkbox, then look for it in the script pane.
+The method's body ID changes every time the SWF is exported from Animate, however, so it won't be consistent among different versions of SSF2.
+It's very inefficient and doesn't work if you're trying to be clever with version-proof code.
+The way around this is to use the -replacemethod method, which allows you to specify the method name instead of the method body id.
 
-* [LZMA SDK] (SWF de/compress) - public domain
-* [Monte Media Library] (Frames to AVI export) - LGPL
-* [Fontastic] (Font TTF export) - LGPL
-* [DoubleType] (Font TTF export) - GPLv2
-* [jPacker] (Canvas scripts compression) - MIT License
-* [gnujpdf] (PDF export) - LGPL License
+When using the -replace method, you have to specify a few things.
+First, the path to the input .swf (or .ssf) file. This is the base file that you're modding.
+Then, the path to the the output .swf file. This is the file you'll be saving your changes to.
+Then, you put the character ID, the number next to the thing in JPEXS. 
+For example: Tingle's Image's character ID in DAT8 (misc.ssf) in v0.9b is 131.
+Next, you put the path to the file you're replacing the target thing with.
+Then, if you're replacing a shape, you have to type "nofill" if you want the background to be transparent.
+Lastly, if you're replacing an image or a shape, you have to type the format. 
+Valid formats are listed in the replace documentation.
 
-[GIT]: http://git-scm.com/downloads
-[Netbeans IDE]: http://www.netbeans.org/
-[Apache Ant]: http://ant.apache.org/
-[launch4j]: http://launch4j.sourceforge.net/
-[NSIS]: http://nsis.sourceforge.net/
-[JSyntaxPane]: https://code.google.com/p/jsyntaxpane/
-[Muffin]: http://muffin.doit.org/
-[Java Native Access - JNA]: https://github.com/twall/jna
-[Insubstantial]: http://shemnon.com/speling/2011/04/insubstantial-62-release.html
-[javactivex]:https://github.com/jindrapetrik/javactivex
-[flashdebugger library]: https://github.com/jindrapetrik/flashdebugger
-[Silk icons pack]: http://www.famfamfam.com/lab/icons/silk/
-[Silk companion 1]: http://damieng.com/creative/icons/silk-companion-1-icons
-[FatCow icons pack]: http://www.fatcow.com/free-icons
-[sfntly]: https://code.google.com/p/sfntly/
-[JLayer]: http://www.javazoom.net/javalayer/javalayer.html
-[Animated GIF Writer]: http://elliot.kroo.net/software/java/GifSequenceWriter/
-[Animated GIF Encoder]: http://www.fmsware.com/stuff/gif.html
-[LZMA SDK]: http://www.7-zip.org/sdk.html
-[Monte Media Library]: http://www.randelshofer.ch/monte/
-[Fontastic]: http://code.andreaskoller.com/libraries/fontastic/
-[DoubleType]: http://sourceforge.net/projects/doubletype/
-[jPacker]: https://code.google.com/p/jpacker/
-[gnujpdf]: http://gnujpdf.sourceforge.net/
+All in all, replacing Tingle's sprite in 9b with the contents of an image called "image.png" would look something like this:
+
+java -jar jpexs.jar -replace DAT8.ssf DAT8new.ssf 131 image.png nofill lossless2
+
+Meanwhile, replacing Kirby's victory theme in 9b with the contents of a .wav file called "song.wav" would look something like this:
+
+java -jar jpexs.jar -replace DAT15.ssf DAT15new.ssf 31 song.wav
+
+
+
+## -replacebatch
+
+The -replacebatch method is just like the replace method, only instead of specifying a file you wanna replace stuff with, you specify the folder containing folders containing files you wanna replace stuff with.
+For example: Say you exported all of 9b Kirby's images to a folder called "exports" so that the path to the black mage hat was "exports/images/99.png"
+You could run the following to replace all of Kirby's images with the exported images:
+
+java -jar jpexs.jar -replacebatch DAT15.ssf DAT15new.ssf exports nofill lossless2
+
+Additionally, if exports contained appropriately numbered sounds in the a folder labeled "sounds" in exports, it would try to replace the associated sounds in Kirby's file.
+
+
+
+## -replacemethod
+
+The -replacemethod method replaces the contents of a method's p-code with the stuff you provide in an external file. 
+In order to replace it, you must specify the class it's in using the full classpath.
+For example: Say you wanted to replace MainTimeline.getChar1 in 9b Kirby's file with the contents of a file called "newGetChar1.pcode"
+You could run the following to do so:
+
+java -jar jpexs.jar -format script:pcode -replacemethod DAT15.ssf DAT15new.ssf kirby_fla.MainTimeline newGetChar1.pcode getChar1
+
+This method is notably used in SSF2IDK Generator to export the ResourceManager.
+
+
+
+# SSF2Patcher Challenges
+
+## SSF2PATCHER CHALLENGE 1
+Get JPEXS to output a list of commands
+
+## SSF2PATCHER CHALLENGE 2###
+Write a .bat script to replace 9b Meta Knight's victory music with a song of your choice, as well as making his fsmash deal 999%.
+
+## SSF2PATCHER CHALLENGE 3###
+Make a .bat script that replaces Kirby's sprites with Bandana Dee's sprites.

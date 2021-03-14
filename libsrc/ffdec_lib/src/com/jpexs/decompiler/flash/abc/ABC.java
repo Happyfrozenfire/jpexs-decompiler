@@ -888,6 +888,37 @@ public class ABC {
 
         return null;
     }
+    
+    public Trait findTraitByClassAndName(String classNameWithSuffix, String methodNameWithSuffix) {
+        for (int i = 0; i < instance_info.size(); i++) 
+        {
+            System.out.println(constants.getMultiname(instance_info.get(i).name_index).getName(constants, null, true, true));
+            if (classNameWithSuffix.equals(constants.getMultiname(instance_info.get(i).name_index).getName(constants, null, true, true))) 
+            {
+                System.out.println("Point B");
+                for (Trait t : instance_info.get(i).instance_traits.traits) 
+                {
+                    if (methodNameWithSuffix.equals(t.getName(this).getName(constants, null, true, true))) {
+                        return t;
+                    }
+                    
+                }
+
+                for (Trait t : class_info.get(i).static_traits.traits) {
+                    
+                        
+                        
+                        if (methodNameWithSuffix.equals(t.getName(this).getName(constants, null, true, true))) {
+                            return t;
+                        }
+                    
+                }
+                //break;
+            }
+        }
+
+        return null;
+    }
 
     public boolean isStaticTraitId(int classIndex, int traitId) {
         if (classIndex == -1) {

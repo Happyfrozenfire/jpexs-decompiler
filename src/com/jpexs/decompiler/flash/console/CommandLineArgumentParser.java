@@ -17,6 +17,7 @@
 package com.jpexs.decompiler.flash.console;
 
 import com.jpexs.decompiler.flash.AbortRetryIgnoreHandler;
+import com.jpexs.decompiler.flash.abc.types.Multiname;
 import com.jpexs.decompiler.flash.ApplicationInfo;
 import com.jpexs.decompiler.flash.EventListener;
 import com.jpexs.decompiler.flash.IdentifiersDeobfuscation;
@@ -32,14 +33,21 @@ import com.jpexs.decompiler.flash.abc.RenameType;
 import com.jpexs.decompiler.flash.abc.ScriptPack;
 import com.jpexs.decompiler.flash.abc.avm2.AVM2Code;
 import com.jpexs.decompiler.flash.abc.avm2.deobfuscation.DeobfuscationLevel;
+import com.jpexs.decompiler.flash.abc.avm2.instructions.AVM2Instruction;
+import com.jpexs.decompiler.flash.abc.avm2.instructions.AVM2Instructions;
 import com.jpexs.decompiler.flash.abc.avm2.parser.AVM2ParseException;
 import com.jpexs.decompiler.flash.abc.avm2.parser.pcode.ASM3Parser;
 import com.jpexs.decompiler.flash.abc.avm2.parser.pcode.MissingSymbolHandler;
 import com.jpexs.decompiler.flash.abc.avm2.parser.script.ActionScript3Parser;
+import com.jpexs.decompiler.flash.abc.types.ABCException;
 import com.jpexs.decompiler.flash.abc.types.Decimal;
 import com.jpexs.decompiler.flash.abc.types.Float4;
 import com.jpexs.decompiler.flash.abc.types.MethodBody;
+import com.jpexs.decompiler.flash.abc.types.MethodInfo;
+import com.jpexs.decompiler.flash.abc.types.ValueKind;
 import com.jpexs.decompiler.flash.abc.types.traits.Trait;
+import com.jpexs.decompiler.flash.abc.types.traits.TraitMethodGetterSetter;
+import com.jpexs.decompiler.flash.abc.types.traits.TraitSlotConst;
 import com.jpexs.decompiler.flash.action.parser.ActionParseException;
 import com.jpexs.decompiler.flash.action.parser.pcode.ASMParser;
 import com.jpexs.decompiler.flash.action.parser.script.ActionScript2Parser;
@@ -513,6 +521,22 @@ public class CommandLineArgumentParser {
             out.println(" " + (cnt++) + ") -zoom <N>");
             out.println(" ...apply zoom during export");
         }
+        
+        /*if(filter == null || filter.equals("addtrait"))
+        {
+            out.println(" " + (cnt++) + ") -addtrait <infile> <outfile> <scriptName> <traitName> [static] [namespace] [traitType]");
+            out.println(" ...creates a new trait in a script");
+            out.println(" ...<static> parameter is a bool. Default value: false");
+            out.println(" ...<namespace> parameter is an enumerated type. Default value: public");
+            out.println(" ...valid namespace values: public, private, explicit, PackageNamespace, PrivateNamespace,");
+            out.println(" ...ProtectedNamespace, Namespace, PackageInternalNs, ExplicitNamespace, StaticProtectedNamespace");
+            out.println(" ... - public = PackageNamespace");
+            out.println(" ... - private = PrivateNamespace");
+            out.println(" ... - explicit = ExplicitNamespace");
+            out.println(" ...<traitType> parameter is an enumerated type. Default value: method");
+            out.println(" ...valid traitType values: method, getter, setter, const, var, slot");
+            out.println(" ... - slot = var");
+        }*/
 
         if (filter == null || filter.equals("replace")) {
             out.println(" " + (cnt++) + ") -replace <infile> <outfile> (<characterId1>|<scriptName1>) <importDataFile1> [nofill] ([<format1>][<methodBodyIndex1>]) [(<characterId2>|<scriptName2>) <importDataFile2> [nofill] ([<format2>][<methodBodyIndex2>])]...");
@@ -521,6 +545,23 @@ public class CommandLineArgumentParser {
             out.println(" ...<format> parameter can be specified for Image and Shape tags");
             out.println(" ...valid formats: lossless, lossless2, jpeg2, jpeg3, jpeg4");
             out.println(" ...<methodBodyIndexN> parameter should be specified if and only if the imported entity is an AS3 P-Code");
+        }
+        
+        if(filter == null || filter.equals("replacebatch"))
+        {
+            out.println(" " + (cnt++) + ") -replacebatch <infile> <outfile> <importDataFolder> [nofill] [format1]");
+            out.println(" ...replaces the data of the specified BinaryData, Image, Shape, Text, and DefineSound tags");
+            out.println(" ...<importDataFolder> paramemeter must point to a folder that contains folders for each type of tag you want to replace");
+            out.println(" ...ex. dat15/exports contains the folders images, sounds, and binaryData, so it will replace images, sounds, and binaryData");
+            out.println(" ...nofill parameter can be specified only for shape replace");
+            out.println(" ...<format> parameter can be specified for Image and Shape tags");
+            out.println(" ...valid formats: lossless, lossless2, jpeg2, jpeg3, jpeg4");
+        }
+        
+        if(filter == null || filter.equals("replacemethod"))
+        {
+            out.println(" " + (cnt++) + ") -replacemethod <infile> <outfile> <scriptName> <importDataFile1> methodName");
+            out.println(" ...replaces the p-code of the specified method");
         }
 
         if (filter == null || filter.equals("replacealpha")) {
@@ -915,8 +956,14 @@ public class CommandLineArgumentParser {
             parseEnableDebugging(args);
         } else if (command.equals("flashpaper2pdf")) {
             parseFlashPaperToPdf(selection, zoom, args);
+        /*} else if(command.equals("addtrait")) {
+            addTrait(args);*/
         } else if (command.equals("replace")) {
             parseReplace(args);
+        } else if (command.equals("replacebatch")) {
+            parseReplaceBatch(args);
+        } else if (command.equals("replacemethod")) {
+            parseReplaceMethod(args);
         } else if (command.equals("replacealpha")) {
             parseReplaceAlpha(args);
         } else if (command.equals("replacecharacter")) {
@@ -1130,7 +1177,9 @@ public class CommandLineArgumentParser {
             SwfToSwcExporter exporter = new SwfToSwcExporter();
             try {
                 exporter.exportSwf(swf, outFile, false);
-            } catch (IOException | InterruptedException ex) {
+            } catch (IOException ex) {
+                Logger.getLogger(CommandLineArgumentParser.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
                 Logger.getLogger(CommandLineArgumentParser.class.getName()).log(Level.SEVERE, null, ex);
             }
         });
@@ -1164,7 +1213,6 @@ public class CommandLineArgumentParser {
             badArguments("getinstancemetadata");
         }
         processReadSWF(swfFile, stdOutFile, (SWF swf, OutputStream stdout) -> {
-
             LinkReportExporter lre = new LinkReportExporter();
 
             List<ScriptPack> reportPacks;
@@ -1175,12 +1223,14 @@ public class CommandLineArgumentParser {
                 System.exit(1);
                 return;
             }
+
+            String reportStr = "";
             try {
-                String reportStr = lre.generateReport(swf, reportPacks, null);
-                stdout.write(reportStr.getBytes("UTF-8"));
+                reportStr = lre.generateReport(swf, reportPacks, null);
             } catch (InterruptedException ex) {
-                System.err.println("Report generation interrupted");
+                Logger.getLogger(CommandLineArgumentParser.class.getName()).log(Level.SEVERE, null, ex);
             }
+            stdout.write(reportStr.getBytes("UTF-8"));
         });
     }
 
@@ -1515,7 +1565,7 @@ public class CommandLineArgumentParser {
 
                             Object newValue;
                             if (fKey != null) {
-                                ObjectType ot = new ObjectType(new Traits("", true, new ArrayList<>()));
+                                ObjectType ot = new ObjectType(new com.jpexs.decompiler.flash.amf.amf3.Traits("", true, new ArrayList<>()));
                                 ot.put(fKey, fAmfValue);
                                 newValue = ot;
                             } else {
@@ -3053,7 +3103,530 @@ public class CommandLineArgumentParser {
             System.exit(2);
         }
     }
+    
+    private static void addTrait(Stack<String> args)
+    {
+        if(args.size() < 4)
+        {
+            badArguments("addtrait");
+        }
+        
+        File inFile = new File(args.pop());
+        File outFile = new File(args.pop());
+        String scriptName = args.pop();
+        String traitName = args.pop();
+        
+        boolean isStatic = false;
+        if(!args.empty() && args.peek().toLowerCase().trim().equals("static"))
+        {
+            args.pop();
+            isStatic = true;
+        }
+        
+        int namespace = 0;
+        if(!args.isEmpty())
+        {
+            String s = args.peek().toLowerCase().trim();
+            if(s.equals("public") || s.equals("packagenamespace"))
+            {
+                args.pop();
+                namespace = 0; 
+            }
+            else if(s.equals("private") || s.equals("privatenamespace"))
+            {
+                args.pop();
+                namespace = 1;
+            }
+            else if(s.equals("protectednamespace"))
+            {
+                args.pop();
+                namespace = 2;
+            }
+            else if(s.equals("namespace"))
+            {
+                args.pop();
+                namespace = 3;
+            }
+            else if(s.equals("packageinternalns"))
+            {
+                args.pop();
+                namespace = 4;
+            }
+            else if(s.equals("explicit") || s.equals("explicitnamespace"))
+            {
+                args.pop();
+                namespace = 5;
+            }
+            else if(s.equals("staticprotectednamespace"))
+            {
+                args.pop();
+                namespace = 6;
+            }
+        }
+        
+        int traitType = 0;
+        if(!args.isEmpty())
+        {
+            String s = args.peek().toLowerCase().trim();
+            if(s.equals("method"))
+            {
+                args.pop();
+                traitType = 0; 
+            }
+            else if(s.equals("getter"))
+            {
+                args.pop();
+                traitType = 1;
+            }
+            else if(s.equals("setter"))
+            {
+                args.pop();
+                traitType = 2;
+            }
+            else if(s.equals("const"))
+            {
+                args.pop();
+                traitType = 3;
+            }
+            else if(s.equals("var") || s.equals("slot"))
+            {
+                args.pop();
+                traitType = 4;
+            }
+        }
+        
+        try 
+        {
+            try (FileInputStream is = new FileInputStream(inFile)) {
+                SWF swf = new SWF(is, Configuration.parallelSpeedUp.get());
+                
+                Map<String, ASMSource> asms = swf.getASMs(false);
+                boolean found = false;
 
+                //CODE THAT MATTERS
+                List<ScriptPack> packs = swf.getAS3Packs();
+                for (ScriptPack entry : packs) {
+                    if (entry.getClassPath().toString().equals(scriptName)) 
+                    {
+                        found = true;
+                        // replace AS3
+                        ScriptPack pack = entry;
+
+                        ABC abc = pack.abc;
+                        int class_index = abc.findClassByName(scriptName);
+                        int void_type = abc.constants.getPublicQnameId("void", true);//abc.constants.forceGetMultinameId(new Multiname(Multiname.QNAME, abc.constants.forceGetStringId("void"), abc.constants.forceGetNamespaceId(new Namespace(Namespace.KIND_PACKAGE, abc.constants.forceGetStringId("")), 0), -1, -1, new ArrayList<Integer>()));
+                        int int_type = abc.constants.getPublicQnameId("int", true); //abc.constants.forceGetMultinameId(new Multiname(Multiname.QNAME, abc.constants.forceGetStringId("int"), abc.constants.forceGetNamespaceId(new Namespace(Namespace.KIND_PACKAGE, abc.constants.forceGetStringId("")), 0), -1, -1, new ArrayList<Integer>()));
+                        Trait t = null;
+
+                        Multiname m = Multiname.createQName(false, abc.constants.getStringId(traitName, true), abc.constants.getNamespaceId(namespace, "", 0, true));
+                        int mid = abc.constants.getMultinameId(m, false);
+                        if (mid <= 0) {
+                            break;
+                        }
+                        for (Trait tr : abc.class_info.get(class_index).static_traits.traits) {
+                            if (tr.name_index == mid) {
+                                System.err.println(scriptName + " already has a trait named " + traitName);
+                                System.exit(1);
+                            }
+                        }
+
+                        for (Trait tr : abc.instance_info.get(class_index).instance_traits.traits) {
+                            if (tr.name_index == mid) {
+                                System.err.println(scriptName + " already has a trait named " + traitName);
+                                System.exit(1);
+                            }
+                        }
+                        
+                        switch (traitType) {
+                            case Trait.TRAIT_GETTER:
+                            case Trait.TRAIT_SETTER:
+                            case Trait.TRAIT_METHOD:
+                                TraitMethodGetterSetter tm = new TraitMethodGetterSetter();
+                                MethodInfo mi = new MethodInfo(new int[0], void_type, abc.constants.getStringId(traitName, true), 0, new ValueKind[0], new int[0]);
+                                int method_info = abc.addMethodInfo(mi);
+                                tm.method_info = method_info;
+                                MethodBody body = new MethodBody(abc, new com.jpexs.decompiler.flash.abc.types.traits.Traits(), new byte[0], new ABCException[0]);
+                                body.method_info = method_info;
+                                body.init_scope_depth = 1;
+                                body.max_regs = 1;
+                                body.max_scope_depth = 1;
+                                body.max_stack = 1;
+                                body.exceptions = new ABCException[0];
+                                AVM2Code code = new AVM2Code();
+                                code.code.add(new AVM2Instruction(0, AVM2Instructions.GetLocal0, null));
+                                code.code.add(new AVM2Instruction(0, AVM2Instructions.PushScope, null));
+                                code.code.add(new AVM2Instruction(0, AVM2Instructions.ReturnVoid, null));
+                                body.setCode(code);
+                                com.jpexs.decompiler.flash.abc.types.traits.Traits traits = new com.jpexs.decompiler.flash.abc.types.traits.Traits();
+                                traits.traits = new ArrayList<>();
+                                body.traits = traits;
+                                abc.addMethodBody(body);
+                                t = tm;
+                                break;
+                            case Trait.TRAIT_SLOT:
+                            case Trait.TRAIT_CONST:
+                                TraitSlotConst ts = new TraitSlotConst();
+                                ts.type_index = int_type;
+                                ts.value_kind = ValueKind.CONSTANT_Int;
+                                ts.value_index = abc.constants.getIntId(0, true);
+                                t = ts;
+                                break;
+                        }
+                        
+                        if (t != null) {
+                            t.kindType = traitType;
+                            t.name_index = abc.constants.getMultinameId(m, true);
+                            int traitId;
+                            if (isStatic) {
+                                traitId = abc.class_info.get(class_index).static_traits.addTrait(t);
+                            } else {
+                                traitId = abc.class_info.get(class_index).static_traits.traits.size() + abc.instance_info.get(class_index).instance_traits.addTrait(t);
+                            }
+                            
+                            ((Tag) abc.parentTag).setModified(true);
+                        }
+                        else
+                        {
+                            System.err.println("error: could not generate new trait");
+                            System.exit(1);
+                        }
+                    }
+                }
+
+
+                if (!found) {
+                    System.err.println(scriptName + " is not reocginized as a script name.");
+                    System.exit(1);
+                }
+                
+
+                try {
+                    try (OutputStream fos = new BufferedOutputStream(new FileOutputStream(outFile))) {
+                        swf.saveTo(fos);
+                    }
+                } catch (IOException e) {
+                    System.err.println("I/O error during writing");
+                    System.exit(2);
+                }
+            }
+        } catch (IOException | InterruptedException e) {
+            System.err.println("I/O error during reading");
+            System.exit(2);
+        }
+    }
+    
+    private static void parseReplaceBatch(Stack<String> args)
+    {
+        if(args.size() < 3)
+        {
+            badArguments("replacebatch");
+        }
+        
+        File infile = new File(args.pop());
+        File outfile = new File(args.pop());
+        File importDataFolder = new File(args.pop());
+        String nofill = "";
+        String format = "";
+        
+        if(!args.empty() && args.peek().toLowerCase().trim().equals("nofill"))
+        {
+            nofill = args.pop();
+        }
+        
+        if(!args.empty())
+        {
+            format = args.pop();
+        }
+        
+        Stack<String> outArgs = new Stack<String>();
+        
+        if(!infile.exists())
+        {
+            System.err.println("inFile does not exist");
+            System.exit(2);
+        }
+        
+        if(!importDataFolder.exists())
+        {
+            System.err.println("importDataFolder does not exist");
+        }
+        
+        int queue = 0;
+        
+        System.out.println("Looking for binaryData folder");
+        {
+            File binaryData = new File(importDataFolder, "binaryData");
+            if(binaryData.exists())
+            {
+                System.out.println("Located binaryData folder");
+                File[] files = binaryData.listFiles();
+                for(File f : files)
+                {
+                    try
+                    {
+                        //should pull only the "id" part of the filename
+                        int id = Integer.parseInt(f.getName().split("_|\\.", 2)[0]);
+
+                        outArgs.push(f.getPath());
+                        outArgs.push("" + id);
+
+                        System.out.println("#" + (queue++) + ": replace binaryData id " + id + " with " + f.getPath());
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Skipping file " + f.getName() + " for having bad name formatting");
+                        
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                System.out.println("Could not locate binaryData folder");
+            }
+        }
+        
+        System.out.println("Looking for images folder");
+        {
+            File images = new File(importDataFolder, "images");
+            if(images.exists())
+            {
+                System.out.println("Located images folder");
+                File[] files = images.listFiles();
+                for(File f : files)
+                {
+                    try
+                    {
+                        //should pull only the "id" part of the filename
+                        int id = Integer.parseInt(f.getName().split("_|\\.", 2)[0]);
+
+                        if(!format.equals(""))
+                            outArgs.push(format);
+                        outArgs.push(f.getPath());
+                        outArgs.push("" + id);
+
+                        System.out.println("#" + (queue++) + ": replace image id " + id + " with " + f.getPath());
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Skipping file " + f.getName() + " for having bad name formatting");
+                        
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                System.out.println("Could not locate images folder");
+            }
+        }
+        
+        System.out.println("Looking for shapes folder");
+        {
+            File shapes = new File(importDataFolder, "shapes");
+            if(shapes.exists())
+            {
+                System.out.println("Located shapes folder");
+                File[] files = shapes.listFiles();
+                for(File f : files)
+                {
+                    try
+                    {
+                        //should pull only the "id" part of the filename
+                        int id = Integer.parseInt(f.getName().split("_|\\.", 2)[0]);
+
+                        if(!format.equals(""))
+                            outArgs.push(format);
+                        if(!nofill.equals(""))
+                            outArgs.push(nofill);
+                        outArgs.push(f.getPath());
+                        outArgs.push("" + id);
+
+                        System.out.println("#" + (queue++) + ": replace shape id " + id + " with " + f.getPath());
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Skipping file " + f.getName() + " for having bad name formatting");
+                        
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                System.out.println("Could not locate shapes folder");
+            }
+        }
+        
+        System.out.println("Looking for sounds folder");
+        {
+            File sounds = new File(importDataFolder, "sounds");
+            if(sounds.exists())
+            {
+                System.out.println("Located sounds folder");
+                File[] files = sounds.listFiles();
+                for(File f : files)
+                {
+                    try
+                    {
+                        //should pull only the "id" part of the filename
+                        int id = Integer.parseInt(f.getName().split("_|\\.", 2)[0]);
+                        
+                        outArgs.push(f.getPath());
+                        outArgs.push("" + id);
+
+                        System.out.println("#" + (queue++) + ": replace sound id " + id + " with " + f.getPath());
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Skipping file " + f.getName() + " for having bad name formatting");
+                        
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                System.out.println("Could not locate sounds folder");
+            }
+        }
+        
+        System.out.println("Looking for texts folder");
+        {
+            File texts = new File(importDataFolder, "texts");
+            if(texts.exists())
+            {
+                System.out.println("Located texts folder");
+                File[] files = texts.listFiles();
+                for(File f : files)
+                {
+                    try
+                    {
+                        //should pull only the "id" part of the filename
+                        int id = Integer.parseInt(f.getName().split("_|\\.", 2)[0]);
+                        
+                        outArgs.push(f.getPath());
+                        outArgs.push("" + id);
+
+                        System.out.println("#" + (queue++) + ": replace text id " + id + " with " + f.getPath());
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Skipping file " + f.getName() + " for having bad name formatting");
+                        
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                System.out.println("Could not locate texts folder");
+            }
+        }
+        
+        outArgs.push(outfile.getPath());
+        outArgs.push(infile.getPath());
+        
+        parseReplace(outArgs);
+    }
+
+    private static void parseReplaceMethod(Stack<String> args)
+    {
+        if (args.size() < 5) {
+            badArguments("replacemethod");
+        }
+
+        File inFile = new File(args.pop());
+        File outFile = new File(args.pop());
+        try 
+        {
+            try (FileInputStream is = new FileInputStream(inFile)) {
+                SWF swf = new SWF(is, Configuration.parallelSpeedUp.get());
+                while (true) 
+                {
+                    String objectToReplace = args.pop();
+
+                    
+                    Map<String, ASMSource> asms = swf.getASMs(false);
+                    boolean found = false;
+
+                    //CODE THAT MATTERS
+                    List<ScriptPack> packs = swf.getAS3Packs();
+                    for (ScriptPack entry : packs) {
+                        if (entry.getClassPath().toString().equals(objectToReplace)) {
+                            found = true;
+                            // replace AS3
+                            String repFile = args.pop();
+                            String repText = Helper.readTextFile(repFile);
+                            ScriptPack pack = entry;
+                            if (Path.getExtension(repFile).equals(".as")) {
+                                replaceAS3(repText, pack);
+                            } else {
+                                // todo: get traits
+                                if (args.isEmpty()) {
+                                    badArguments("replace");
+                                }
+
+                                ABC abc = pack.abc;
+                                
+                                 
+                                String methodName = args.pop();
+                                System.out.println("Method name: " + methodName);
+                                System.out.println("Object to replace: " + objectToReplace);
+                                System.out.println("getNameWithNamespace: " + entry.getNameWithNamespaceSuffix());
+                                
+                                System.out.println("Point A");
+                                
+                                //abc.findFunctionBodyByName("foo", "Bar");
+                                 
+                                //int bodyIndex = abc.findFunctionBodyByName(objectToReplace, objectToReplace + ":" + methodName);
+                                Trait trait = abc.findTraitByClassAndName(entry.getNameWithNamespaceSuffix(), methodName);
+                                
+                                  
+                                //List<Trait> resultTraits = abc.getMethodIndexing().findMethodTraits(pack, bodyIndex);
+ 
+                                //int classIndex = 0;
+                                //int traitId = 0;
+                                //trait = null; //abc.findTraitByTraitId(classIndex, traitId);
+                                /*if (resultTraits.size() == 1) {
+                                    trait = resultTraits.get(0);
+                                }*/
+                                
+                                int bodyIndex = abc.findBodyIndex(((TraitMethodGetterSetter)trait).method_info);
+                                System.out.println("trait index: " + bodyIndex);
+
+                                replaceAS3PCode(repText, abc, bodyIndex, trait);
+                            }
+                        }
+                    }
+
+
+                    if (!found) {
+                        System.err.println(objectToReplace + " is not reocginized as a CharacterId or a script name.");
+                        System.exit(1);
+                    }
+                    
+
+                    if (args.isEmpty() || args.peek().startsWith("-")) {
+                        break;
+                    }
+                }
+
+                try {
+                    try (OutputStream fos = new BufferedOutputStream(new FileOutputStream(outFile))) {
+                        swf.saveTo(fos);
+                    }
+                } catch (IOException e) {
+                    System.err.println("I/O error during writing");
+                    System.exit(2);
+                }
+            }
+        } catch (IOException | InterruptedException e) {
+            System.err.println("I/O error during reading");
+            System.exit(2);
+        }
+    }
+    
     private static int parseImageFormat(Stack<String> args) {
         if (args.isEmpty()) {
             return 0;
@@ -3576,9 +4149,13 @@ public class CommandLineArgumentParser {
 
     private static void replaceAS3PCode(String text, ABC abc, int bodyIndex, Trait trait) throws IOException, InterruptedException {
         System.out.println("Replace AS3 PCode");
+        
+        System.out.println("Target Trait name: " + trait.getName(abc).getName(abc.constants, null, true, true));
+        
         if (text.trim().startsWith(Helper.hexData)) {
             byte[] data = Helper.getBytesFromHexaText(text);
             MethodBody mb = abc.bodies.get(bodyIndex);
+            
             mb.setCodeBytes(data);
         } else {
             try {
